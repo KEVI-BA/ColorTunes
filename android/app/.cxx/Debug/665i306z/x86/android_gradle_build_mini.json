@@ -1,0 +1,20 @@
+{
+  "buildFiles": [
+    "C:\\Users\\kevin\\FLUTTER\\flutter\\packages\\flutter_tools\\gradle\\src\\main\\groovy\\CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "C:\\Users\\kevin\\AppData\\Local\\Android\\sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+      "-C",
+      "C:\\Users\\kevin\\FLUTTER\\PROYECTOS\\colortunes_beta\\android\\app\\.cxx\\Debug\\665i306z\\x86",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "C:\\Users\\kevin\\AppData\\Local\\Android\\sdk\\cmake\\3.22.1\\bin\\ninja.exe",
+    "-C",
+    "C:\\Users\\kevin\\FLUTTER\\PROYECTOS\\colortunes_beta\\android\\app\\.cxx\\Debug\\665i306z\\x86",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {}
+}

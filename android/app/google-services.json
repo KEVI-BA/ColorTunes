@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "228033110010",
+    "project_id": "colort-3abe8",
+    "storage_bucket": "colort-3abe8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:228033110010:android:d3af2714709b35f951ce43",
+        "android_client_info": {
+          "package_name": "com.example.colortunes_beta"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "228033110010-bcll4k99e3ma684dh9akcscdpfub3j6t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwI3xtTforS7iyqOehTKb0iaCJygAIy38"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "228033110010-bcll4k99e3ma684dh9akcscdpfub3j6t.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "228033110010-v8okmj94pp6ft9p7e6dffajnud6u186i.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.colortunes"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
