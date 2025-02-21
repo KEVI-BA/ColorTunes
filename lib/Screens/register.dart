@@ -1,12 +1,12 @@
-// registration_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class RegistrationScreen extends StatefulWidget {
-  const RegistrationScreen({Key? key}) : super(key: key);
+  const RegistrationScreen({super.key});
 
   @override
   _RegistrationScreenState createState() => _RegistrationScreenState();
@@ -95,6 +95,37 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
   }
 
+  //registro con apple
+  Future<void> _registerWithApple() async {
+    try {
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      final oauthCredential = OAuthProvider("apple.com").credential(
+        idToken: credential.identityToken,
+        accessToken: credential.authorizationCode,
+      );
+
+      final UserCredential userCredential =
+          await _auth.signInWithCredential(oauthCredential);
+
+      // Crea el documento en Firestore
+      await _createUserDocument(userCredential.user!, "apple");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Registro exitoso con Apple")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error con Apple: $e")),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _displayNameController.dispose();
@@ -106,40 +137,172 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Registro"),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              // Formulario para registro con email
-              TextField(
-                controller: _displayNameController,
-                decoration: const InputDecoration(labelText: "Display Name"),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF5A2EE8), Color(0xFF42D1FF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    "ColorTunes",
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontFamily: 'Bigail',
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Tarjeta con campos de entrada
+                  Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    elevation: 8,
+                    color: Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        children: [
+                          // Campo Display Name
+                          TextField(
+                            controller: _displayNameController,
+                            decoration: InputDecoration(
+                              labelText: 'Display Name',
+                              prefixIcon: const Icon(Icons.person,
+                                  color: Colors.blueAccent),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 15),
+
+                          // Campo Email
+                          TextField(
+                            controller: _emailController,
+                            decoration: InputDecoration(
+                              labelText: 'Email',
+                              prefixIcon: const Icon(Icons.email,
+                                  color: Colors.blueAccent),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 15),
+
+                          // Campo Contraseña
+                          TextField(
+                            controller: _passwordController,
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              prefixIcon: const Icon(Icons.lock,
+                                  color: Colors.blueAccent),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            obscureText: true,
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Botón de registro con Email
+                          ElevatedButton(
+                            onPressed: _registerWithEmail,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              backgroundColor: Colors.blueAccent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.person_add, color: Colors.white),
+                                SizedBox(width: 8),
+                                Text(
+                                  "Registrarse con Email",
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontFamily: 'Bigail',
+                                      color: Colors.white),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Enlace de registro con Google
+                  TextButton(
+                    onPressed: _registerWithGoogle,
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.g_translate_rounded,
+                            color: Colors.white), // Ícono de Google
+                        SizedBox(width: 8),
+                        Text(
+                          "Registrarse con Google",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontFamily: 'Bigail',
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Botón de registro con Apple
+                  TextButton(
+                    onPressed: _registerWithApple,
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.apple, color: Colors.white),
+                        SizedBox(width: 8),
+                        Text(
+                          "Registrarse con Apple",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontFamily: 'Bigail',
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              TextField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: "Email"),
-              ),
-              TextField(
-                controller: _passwordController,
-                decoration: const InputDecoration(labelText: "Password"),
-                obscureText: true,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _registerWithEmail,
-                child: const Text("Registrarse con Email"),
-              ),
-              const Divider(height: 32),
-              // Botón para registro con Google
-              ElevatedButton(
-                onPressed: _registerWithGoogle,
-                child: const Text("Registrarse con Google"),
-              ),
-            ],
+            ),
           ),
         ),
       ),

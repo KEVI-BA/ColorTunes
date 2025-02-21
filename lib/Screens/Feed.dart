@@ -1,3 +1,4 @@
+import 'package:colortunes_beta/Screens/share_songs.dart';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:colortunes_beta/Api/music_services.dart';
@@ -5,53 +6,78 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 import 'dart:math';
+import 'package:colortunes_beta/Modelos/songs.dart';
+import 'package:colortunes_beta/Screens/login.dart';
 
 class MusicSearchPage extends StatefulWidget {
   final User user;
 
-  const MusicSearchPage({Key? key, required this.user}) : super(key: key);
+  const MusicSearchPage({super.key, required this.user});
 
   @override
   _MusicSearchPageState createState() => _MusicSearchPageState();
 }
 
-class _MusicSearchPageState extends State<MusicSearchPage> {
+class _MusicSearchPageState extends State<MusicSearchPage>
+    with SingleTickerProviderStateMixin {
   final MusicService _musicService = MusicService();
   List<Song> _songs = [];
   final AudioPlayer _audioPlayer = AudioPlayer();
   List<Color> _gradientColors = [Colors.blue, Colors.purple, Colors.red];
   Timer? _colorChangeTimer;
-  Set<String> _likedSongs = {}; // Almacena los "me gusta"
+  final Set<String> _likedSongs = {};
+  int _currentIndex = 0;
+  int _currentSongIndex = 0;
+  late AnimationController _rotationController;
+  late Animation<double> _rotationAnimation;
 
   @override
   void initState() {
     super.initState();
+
     _loadSongs();
-    _loadLikedSongs();
     _colorChangeTimer = Timer.periodic(const Duration(seconds: 2), (_) {
       _changeGradientColors();
+    });
+
+    _rotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..repeat();
+
+    _rotationAnimation = Tween(begin: 0.0, end: 2 * pi).animate(
+      CurvedAnimation(
+        parent: _rotationController,
+        curve: Curves.linear,
+      ),
+    );
+
+    Future.delayed(const Duration(milliseconds: 500), () {
+      setState(() {
+        if (_songs.isNotEmpty) {
+          _audioPlayer.play(UrlSource(_songs[0].previewUrl));
+        }
+      });
     });
   }
 
   @override
   void dispose() {
     _colorChangeTimer?.cancel();
+    _audioPlayer.dispose();
+    _rotationController.dispose();
     super.dispose();
   }
 
   void _loadSongs() async {
-    final songs = await _musicService.getRandomSongs();
-    setState(() {
-      _songs = songs;
-    });
-  }
-
-  void _playPreview(String url) {
-    _audioPlayer.play(UrlSource(url));
-  }
-
-  void _stopPreview() {
-    _audioPlayer.stop();
+    try {
+      final songs = await _musicService.getRandomSongs();
+      setState(() {
+        _songs = songs;
+      });
+    } catch (e) {
+      print("Error al cargar las canciones: $e");
+    }
   }
 
   void _changeGradientColors() {
@@ -68,26 +94,9 @@ class _MusicSearchPageState extends State<MusicSearchPage> {
     });
   }
 
-  // Cargar "me gusta" desde Firebase
-  Future<void> _loadLikedSongs() async {
+  void _toggleLike(String songUrl) async {
     final docRef =
         FirebaseFirestore.instance.collection('likes').doc(widget.user.uid);
-    final snapshot = await docRef.get();
-
-    if (snapshot.exists && snapshot.data() != null) {
-      final likedSongs =
-          List<String>.from(snapshot.data()?['likedSongs'] ?? []);
-      setState(() {
-        _likedSongs = likedSongs.toSet();
-      });
-    }
-  }
-
-  // Guardar "me gusta" en Firebase
-  Future<void> _toggleLike(String songUrl) async {
-    final docRef =
-        FirebaseFirestore.instance.collection('likes').doc(widget.user.uid);
-
     setState(() {
       if (_likedSongs.contains(songUrl)) {
         _likedSongs.remove(songUrl);
@@ -97,7 +106,7 @@ class _MusicSearchPageState extends State<MusicSearchPage> {
       } else {
         _likedSongs.add(songUrl);
         docRef.set({
-          'likedSongs': FieldValue.arrayUnion([songUrl])
+          'likedSongs': FieldValue.arrayUnion([songUrl]),
         }, SetOptions(merge: true));
       }
     });
@@ -105,94 +114,189 @@ class _MusicSearchPageState extends State<MusicSearchPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_songs.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Music Search')),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(
         title: Row(
           children: [
-            CircleAvatar(
-              backgroundImage: widget.user.photoURL != null
-                  ? NetworkImage(widget.user.photoURL!)
-                  : const AssetImage('assets/default_avatar.png')
-                      as ImageProvider,
-              radius: 20,
-            ),
             const SizedBox(width: 10),
-            Text(
-              widget.user.displayName ?? 'Usuario',
-              style: const TextStyle(fontSize: 18),
-            ),
+            Text(widget.user.displayName ?? 'Usuario',
+                style: const TextStyle(fontSize: 18)),
           ],
         ),
       ),
-      body: AnimatedContainer(
-        duration: const Duration(seconds: 2),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: _gradientColors,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: PageView.builder(
-          itemCount: _songs.length,
-          onPageChanged: (index) {
-            _stopPreview();
-            _playPreview(_songs[index].previewUrl);
-          },
-          itemBuilder: (context, index) {
-            final song = _songs[index];
-
-            return Center(
+      body: _songs.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: _gradientColors,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Image.network(song.imageUrl),
-                  const SizedBox(height: 20),
-                  Text(
-                    song.title,
-                    style: const TextStyle(
-                        fontSize: 24, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(song.artist, style: const TextStyle(fontSize: 18)),
-                  const SizedBox(height: 20),
-
-                  // Botón de "Me gusta"
-                  IconButton(
-                    icon: Icon(
-                      _likedSongs.contains(song.previewUrl)
-                          ? Icons.favorite
-                          : Icons.favorite_border,
-                      color: _likedSongs.contains(song.previewUrl)
-                          ? Colors.red
-                          : Colors.white,
+                  Expanded(
+                    child: PageView.builder(
+                      scrollDirection: Axis.vertical,
+                      itemCount: _songs.length,
+                      itemBuilder: (context, index) {
+                        return _buildSongCard(_songs[index]);
+                      },
+                      onPageChanged: (index) {
+                        setState(() {
+                          _currentSongIndex = index;
+                          _audioPlayer
+                              .play(UrlSource(_songs[index].previewUrl));
+                        });
+                      },
                     ),
-                    onPressed: () => _toggleLike(song.previewUrl),
-                    iconSize: 40,
                   ),
-
-                  const SizedBox(height: 20),
-
-                  // Botón de Reproducir
-                  IconButton(
-                    icon: const Icon(Icons.play_arrow),
-                    onPressed: () => _playPreview(song.previewUrl),
-                    iconSize: 60,
-                  ),
-                  const SizedBox(height: 20),
                 ],
               ),
+            ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          if (index == 2) {
+            // Cerrar sesión
+            FirebaseAuth.instance.signOut();
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const LoginScreen()),
             );
-          },
+          } else {
+            // Cambiar de página según el índice
+            setState(() {
+              _currentIndex = index;
+            });
+
+            // Navegar a las pantallas correspondientes
+            switch (index) {
+              case 0:
+                // Navegar a la pantalla de MusicSearchPage (pasa el parámetro 'user')
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        MusicSearchPage(user: widget.user), // Pasa 'user'
+                  ),
+                );
+                break;
+              case 1:
+                // Navegar a la pantalla de canciones compartidas
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SharedSongsPage(
+                      user: widget.user, // Pasa el parámetro 'user'
+                      song: _songs[_currentSongIndex], // Pasa la canción actual
+                    ),
+                  ),
+                );
+                break;
+            }
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.share), label: 'Compartir'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.music_note_rounded), label: 'Para ti'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.logout), label: 'Cerrar sesión'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSongCard(Song song) {
+    return Center(
+      child: Card(
+        elevation: 8,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        child: Container(
+          width: MediaQuery.of(context).size.width * 0.8,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedBuilder(
+                animation: _rotationAnimation,
+                builder: (context, child) {
+                  return Transform.rotate(
+                      angle: _rotationAnimation.value,
+                      child: ClipOval(
+                        child: Image.network(
+                          song.imageUrl,
+                          width: 130.0,
+                          height: 130.0,
+                          fit: BoxFit.cover,
+                        ),
+                      ));
+                },
+              ),
+              const SizedBox(height: 10),
+              Text(song.name,
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              Text(song.artist,
+                  style: const TextStyle(fontSize: 16, color: Colors.grey)),
+              const SizedBox(height: 10),
+              IconButton(
+                icon: Icon(
+                  _likedSongs.contains(song.previewUrl)
+                      ? Icons.favorite
+                      : Icons.favorite_border,
+                  color: _likedSongs.contains(song.previewUrl)
+                      ? Colors.red
+                      : Colors.black,
+                ),
+                onPressed: () => _toggleLike(song.previewUrl),
+                iconSize: 40,
+              ),
+              IconButton(
+                icon: const Icon(Icons.share),
+                onPressed: () async {
+                  try {
+                    Song song = _songs[_currentSongIndex];
+
+                    // Agregar la canción compartida con los campos adicionales
+                    await FirebaseFirestore.instance
+                        .collection('shared_songs')
+                        .add({
+                      'songName': song.name,
+                      'songUrl': song.previewUrl,
+                      'sharedBy': widget
+                          .user.uid, // ID del usuario que compartió la canción
+                      'timestamp': FieldValue.serverTimestamp(),
+                      'image': song.imageUrl,
+                      'comments': "",
+                      'likes': [],
+                      'mood': "",
+                      'artist': song.artist,
+                      'color': "",
+                      'created_at': FieldValue.serverTimestamp(),
+                    });
+
+                    // Navegar a la página de canciones compartidas
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            SharedSongsPage(user: widget.user, song: song),
+                      ),
+                    );
+                  } catch (e) {
+                    print("Error sharing song: $e");
+                    // Mostrar mensaje de error si es necesario
+                  }
+                },
+                iconSize: 40,
+              )
+            ],
+          ),
         ),
       ),
     );

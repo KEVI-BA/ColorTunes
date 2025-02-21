@@ -1,19 +1,52 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:math';
+import 'package:colortunes_beta/Modelos/songs.dart';
 
 class MusicService {
   final List<String> _randomSearchTerms = [
+    // Géneros en inglés
     'pop',
-    'rock',
     'jazz',
-    'classical',
     'hip hop',
     'country',
     'electronic',
-    'indie',
+    'reggaeton',
+    'metal',
+    'folk',
+    'ambient',
+    'alternative',
+    'dancehall',
+    'disco',
+    'trap',
+    'techno',
+    'house',
+    'dubstep',
+    'synthwave',
+    'psytrance',
+    'reggae',
+    'merengue',
+    'flamenco',
+    'cumbia',
+    'corridos',
+    'bolero',
+    'ranchera',
+    'trova',
+    'mariachi',
+    'bossa nova',
+    'tango',
+    'trap latino',
+    'vallenato',
+    'samba',
+    'rumba',
+    'bachata',
+    'norteño',
+    'paseo',
+    'son cubano',
+    'canción romántica',
+    'balada',
+    'pop latino'
   ];
-
   Future<List<Song>> getRandomSongs() async {
     final randomTerm =
         _randomSearchTerms[Random().nextInt(_randomSearchTerms.length)];
@@ -22,35 +55,21 @@ class MusicService {
     );
 
     if (response.statusCode == 200) {
+      // Verificar la respuesta completa
+      print(response
+          .body); // Verifica si la respuesta tiene la estructura esperada
+
       final data = json.decode(response.body);
-      List<Song> songs =
-          (data['results'] as List).map((song) => Song.fromJson(song)).toList();
-      return songs;
+      if (data['results'] != null) {
+        List<Song> songs = (data['results'] as List)
+            .map((song) => Song.fromApi(song))
+            .toList();
+        return songs;
+      } else {
+        throw Exception('No songs found in the response');
+      }
     } else {
       throw Exception('Failed to load songs');
     }
-  }
-}
-
-class Song {
-  final String title;
-  final String imageUrl;
-  final String previewUrl;
-  final String artist;
-
-  Song({
-    required this.title,
-    required this.imageUrl,
-    required this.previewUrl,
-    required this.artist,
-  });
-
-  factory Song.fromJson(Map<String, dynamic> json) {
-    return Song(
-      title: json['trackName'],
-      imageUrl: json['artworkUrl100'],
-      previewUrl: json['previewUrl'],
-      artist: json['artistName'],
-    );
   }
 }

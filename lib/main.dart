@@ -10,7 +10,7 @@ Future<void> main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
 
 /// Esta pantalla contiene las dos pestañas: Login y Registro.
 class AuthScreen extends StatelessWidget {
-  const AuthScreen({Key? key}) : super(key: key);
+  const AuthScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +34,15 @@ class AuthScreen extends StatelessWidget {
       length: 2, // Dos pestañas: Iniciar sesión y Registrarse
       child: Scaffold(
         appBar: AppBar(
-          title: const Text("Autenticación"),
+          flexibleSpace: const Center(
+            child: Text(
+              "¡Bienvenidos!",
+              style: TextStyle(
+                fontSize: 25,
+                fontFamily: 'Bigail',
+              ),
+            ),
+          ),
           bottom: const TabBar(
             tabs: [
               Tab(text: "Iniciar sesión"),
