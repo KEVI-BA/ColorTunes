@@ -8,6 +8,7 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
+
 android {
     namespace = "com.example.colortunes_beta"
     compileSdk = flutter.compileSdkVersion

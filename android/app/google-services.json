@@ -14,7 +14,15 @@
       },
       "oauth_client": [
         {
-          "client_id": "228033110010-bcll4k99e3ma684dh9akcscdpfub3j6t.apps.googleusercontent.com",
+          "client_id": "228033110010-8e79e2b3okmkqf0ohnamam021teron3e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.colortunes_beta",
+            "certificate_hash": "cd4f32248c1082457ed075f04db3b66676e9782a"
+          }
+        },
+        {
+          "client_id": "228033110010-fied8lfpc7e46h13rosejrsjlc7vsq2r.apps.googleusercontent.com",
           "client_type": 3
         }
       ],

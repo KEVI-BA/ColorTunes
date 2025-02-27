@@ -4,12 +4,16 @@ import 'package:flutter/foundation.dart';
 
 class GoogleSignInService {
   final GoogleSignIn _googleSignIn = GoogleSignIn();
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   /// Inicia sesión con Google y retorna el usuario autenticado o null si falla.
   Future<User?> signInWithGoogle() async {
     try {
-      // Inicia el flujo de autenticación.
+      // Cierra sesión antes de iniciar sesión para forzar la selección de cuenta
+      await signOut();
+
+      // Inicia el flujo de autenticación con Google.
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
         // El usuario canceló el inicio de sesión.
@@ -39,6 +43,7 @@ class GoogleSignInService {
   /// Cierra la sesión tanto en Google como en Firebase.
   Future<void> signOut() async {
     try {
+      await _googleSignIn.disconnect(); // Asegura que la cuenta se desvincule
       await _googleSignIn.signOut();
       await _auth.signOut();
     } catch (error) {

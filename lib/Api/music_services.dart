@@ -47,6 +47,7 @@ class MusicService {
     'balada',
     'pop latino'
   ];
+
   Future<List<Song>> getRandomSongs() async {
     final randomTerm =
         _randomSearchTerms[Random().nextInt(_randomSearchTerms.length)];

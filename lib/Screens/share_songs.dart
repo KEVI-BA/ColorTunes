@@ -1,11 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:colortunes_beta/Modelos/share_songs.dart';
 import 'package:colortunes_beta/Modelos/songs.dart';
-import 'package:colortunes_beta/Screens/Feed.dart';
+import 'package:colortunes_beta/Widget/barra_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:colortunes_beta/Screens/login.dart'; // Para cerrar sesión
 
 class SharedSongsPage extends StatefulWidget {
   final User user;
@@ -20,17 +19,19 @@ class SharedSongsPage extends StatefulWidget {
 class _SharedSongsPageState extends State<SharedSongsPage>
     with SingleTickerProviderStateMixin {
   final AudioPlayer _audioPlayer = AudioPlayer();
-  int _currentIndex = 0; // Índice de la canción actual
-  int _navBarIndex = 1; // Índice del BottomNavigationBar
+  int _currentIndex = 0;
 
   List<SharedSong> _sharedSongs = [];
   late AnimationController _controller;
   late Animation<double> _rotationAnimation;
 
+  // Lista de IDs de usuarios a los que sigue el usuario actual
+  List<String> _following = [];
+
   @override
   void dispose() {
     _audioPlayer.dispose();
-    _controller.dispose(); // Asegúrate de disponer del controlador de animación
+    _controller.dispose();
     super.dispose();
   }
 
@@ -38,17 +39,28 @@ class _SharedSongsPageState extends State<SharedSongsPage>
   void initState() {
     super.initState();
     _fetchSharedSongs();
+    _fetchFollowing(); // Obtener lista de usuarios seguidos
 
-    // Inicializa el controlador de animación
     _controller = AnimationController(
-      duration: const Duration(seconds: 5), // Duración de un giro completo
+      duration: const Duration(seconds: 5),
       vsync: this,
-    )..repeat(); // Repite la animación de forma infinita
+    )..repeat();
 
-    // Definir la animación de rotación
-    _rotationAnimation = Tween<double>(
-            begin: 0.0, end: 2 * 3.14159) // 2π para una rotación completa
-        .animate(_controller);
+    _rotationAnimation =
+        Tween<double>(begin: 0.0, end: 2 * 3.14159).animate(_controller);
+  }
+
+  // Obtener lista de usuarios a los que sigue el usuario actual
+  void _fetchFollowing() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.user.uid)
+        .collection('following')
+        .get();
+
+    setState(() {
+      _following = snapshot.docs.map((doc) => doc.id).toList();
+    });
   }
 
   // Obtener las canciones compartidas desde Firestore
@@ -60,13 +72,13 @@ class _SharedSongsPageState extends State<SharedSongsPage>
 
     final sharedSongs = snapshot.docs
         .map((doc) => SharedSong.fromMap(doc.data(), doc.id))
+        .where((song) => song.userId != widget.user.uid)
         .toList();
 
     setState(() {
       _sharedSongs = sharedSongs;
     });
 
-    // Reproducir automáticamente la primera canción
     if (_sharedSongs.isNotEmpty) {
       _playSong(_sharedSongs[_currentIndex].songUrl);
     }
@@ -101,8 +113,55 @@ class _SharedSongsPageState extends State<SharedSongsPage>
           'likes': FieldValue.arrayRemove([widget.user.uid])
         });
       }
-      // Actualizar el estado para reflejar los cambios
       _fetchSharedSongs();
+    }
+  }
+
+  // Función para seguir/dejar de seguir a un usuario
+  void _toggleFollow(String userId) async {
+    if (userId == widget.user.uid) return; // No permitir seguirse a sí mismo
+
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final batch = firestore.batch();
+
+      final currentUserFollowing = firestore
+          .collection('users')
+          .doc(widget.user.uid)
+          .collection('following')
+          .doc(userId);
+
+      final targetUserFollowers = firestore
+          .collection('users')
+          .doc(userId)
+          .collection('followers')
+          .doc(widget.user.uid);
+
+      // Si ya sigue al usuario, dejar de seguir
+      if (_following.contains(userId)) {
+        batch.delete(currentUserFollowing);
+        batch.delete(targetUserFollowers);
+        setState(() {
+          _following.remove(userId);
+        });
+      }
+      // Si no lo sigue, comenzar a seguir
+      else {
+        batch.set(currentUserFollowing, {
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+        batch.set(targetUserFollowers, {
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+        setState(() {
+          _following.add(userId);
+        });
+      }
+
+      await batch.commit(); // Ejecutar todas las operaciones juntas
+    } catch (e) {
+      print("Error al seguir/dejar de seguir: $e");
+      // Puedes mostrar un mensaje de error al usuario si lo deseas
     }
   }
 
@@ -114,6 +173,9 @@ class _SharedSongsPageState extends State<SharedSongsPage>
         .collection('comments');
     await commentsRef.add({
       'comment': comment,
+      'userId': widget.user.uid,
+      'username': widget.user.displayName ?? 'Usuario',
+      'userPhotoUrl': widget.user.photoURL ?? '',
       'timestamp': FieldValue.serverTimestamp(),
     });
   }
@@ -122,7 +184,16 @@ class _SharedSongsPageState extends State<SharedSongsPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Músicas Compartidas'),
+        flexibleSpace: Container(
+          padding: const EdgeInsets.only(
+              top: 35.0), // Ajusta el valor según sea necesario
+          child: const Center(
+            child: Text(
+              'Para ti',
+              style: TextStyle(fontSize: 20),
+            ),
+          ),
+        ),
       ),
       body: _sharedSongs.isEmpty
           ? const Center(child: CircularProgressIndicator())
@@ -149,59 +220,24 @@ class _SharedSongsPageState extends State<SharedSongsPage>
                 },
               ),
             ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _navBarIndex,
-        onTap: (index) {
-          if (index == 2) {
-            // Cerrar sesión
-            FirebaseAuth.instance.signOut();
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const LoginScreen()),
-            );
-          } else {
+      bottomNavigationBar: CustomNavBar(
+          user: widget.user,
+          song: widget.song,
+          currentIndex: 1,
+          onTap: (index) {
             setState(() {
-              _navBarIndex = index;
+              _currentIndex = index;
             });
-
-            // Navegar a las pantallas correspondientes
-            switch (index) {
-              case 0:
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => MusicSearchPage(user: widget.user),
-                  ),
-                );
-                break;
-              case 1:
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        SharedSongsPage(user: widget.user, song: widget.song),
-                  ),
-                );
-                break;
-            }
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.share), label: 'Compartir'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.music_note_rounded), label: 'Para ti'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.logout), label: 'Cerrar sesión'),
-        ],
-      ),
+          }),
     );
   }
 
   Widget _buildSharedSongCard(SharedSong song) {
     final TextEditingController commentController = TextEditingController();
+    final bool isFollowing = _following.contains(song.userId);
 
     // Función para obtener los comentarios
-    Future<List<Map<String, dynamic>>> _getComments(String songId) async {
+    Future<List<Map<String, dynamic>>> getComments(String songId) async {
       final snapshot = await FirebaseFirestore.instance
           .collection('shared_songs')
           .doc(songId)
@@ -213,7 +249,7 @@ class _SharedSongsPageState extends State<SharedSongsPage>
     }
 
     // Función para mostrar el BottomSheet con los comentarios
-    void _showCommentsBottomSheet(BuildContext context, String songId) {
+    void showCommentsBottomSheet(BuildContext context, String songId) {
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
@@ -237,10 +273,10 @@ class _SharedSongsPageState extends State<SharedSongsPage>
                 ),
                 Expanded(
                   child: FutureBuilder<List<Map<String, dynamic>>>(
-                    future: _getComments(songId),
+                    future: getComments(songId),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Center(child: CircularProgressIndicator());
+                        return const Center(child: CircularProgressIndicator());
                       }
 
                       if (snapshot.hasError) {
@@ -250,7 +286,7 @@ class _SharedSongsPageState extends State<SharedSongsPage>
                       final comments = snapshot.data ?? [];
 
                       if (comments.isEmpty) {
-                        return Center(child: Text('No hay comentarios.'));
+                        return const Center(child: Text('No hay comentarios.'));
                       }
 
                       return ListView.builder(
@@ -258,7 +294,31 @@ class _SharedSongsPageState extends State<SharedSongsPage>
                         itemBuilder: (context, index) {
                           final comment = comments[index];
                           return ListTile(
-                            title: Text(comment['comment'] ?? 'No Comment'),
+                            leading: CircleAvatar(
+                              backgroundImage:
+                                  NetworkImage(comment['userPhotoUrl'] ?? ''),
+                              child: comment['userPhotoUrl'] == null ||
+                                      comment['userPhotoUrl'].isEmpty
+                                  ? const Icon(Icons.person)
+                                  : null,
+                            ),
+                            title: Row(
+                              children: [
+                                Text(
+                                  comment['username'] ?? 'Usuario',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    comment['comment'] ?? 'No Comment',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.normal),
+                                  ),
+                                ),
+                              ],
+                            ),
                             subtitle: Text(
                               comment['timestamp']?.toDate().toString() ??
                                   'Fecha no disponible',
@@ -276,13 +336,13 @@ class _SharedSongsPageState extends State<SharedSongsPage>
                       Expanded(
                         child: TextField(
                           controller: commentController,
-                          decoration: InputDecoration(
+                          decoration: const InputDecoration(
                             hintText: 'Escribe tu comentario...',
                           ),
                         ),
                       ),
                       IconButton(
-                        icon: Icon(Icons.send),
+                        icon: const Icon(Icons.send),
                         onPressed: () {
                           if (commentController.text.isNotEmpty) {
                             _addComment(songId, commentController.text);
@@ -340,17 +400,51 @@ class _SharedSongsPageState extends State<SharedSongsPage>
                 style: const TextStyle(fontSize: 16, color: Colors.grey),
               ),
               const SizedBox(height: 10),
-              // Icono de usuario
+              // Perfil de usuario con botón de seguir
               Row(
-                mainAxisAlignment: MainAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  CircleAvatar(
-                    backgroundImage: NetworkImage(song.userAvatarUrl),
+                  // Información de usuario
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundImage: song.userAvatarUrl.isNotEmpty
+                            ? NetworkImage(song.userAvatarUrl)
+                            : null, // Si está vacío, no intenta cargar la imagen
+                        child: song.userAvatarUrl.isEmpty
+                            ? const Icon(Icons.person,
+                                size: 30) // Ícono si no hay imagen
+                            : null,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        song.username,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Text(song.username),
+                  // Botón seguir (si no es el usuario actual)
+                  if (song.userId != widget.user.uid)
+                    TextButton(
+                      onPressed: () {
+                        _toggleFollow(song.userId);
+                      },
+                      style: TextButton.styleFrom(
+                        backgroundColor:
+                            isFollowing ? Colors.grey[300] : Colors.blue,
+                        foregroundColor:
+                            isFollowing ? Colors.black : Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      child: Text(isFollowing ? 'Siguiendo' : 'Seguir'),
+                    ),
                 ],
               ),
+              const SizedBox(height: 10),
               // Botón de like y comentarios
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -366,7 +460,7 @@ class _SharedSongsPageState extends State<SharedSongsPage>
                               : Colors.grey,
                         ),
                         onPressed: () {
-                          _likeSong(song.id); // Lógica para agregar "like"
+                          _likeSong(song.id);
                         },
                       ),
                       Text('${song.likes.length}'), // Recuento de likes
@@ -375,7 +469,7 @@ class _SharedSongsPageState extends State<SharedSongsPage>
                   IconButton(
                     icon: const Icon(Icons.comment),
                     onPressed: () {
-                      _showCommentsBottomSheet(context, song.id);
+                      showCommentsBottomSheet(context, song.id);
                     },
                   ),
                 ],

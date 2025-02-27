@@ -7,6 +7,8 @@ class Song {
   final String url;
   final String imageUrl;
   final String previewUrl;
+  final String userAvatarUrl;
+  final String username;
 
   Song({
     required this.artist,
@@ -15,6 +17,8 @@ class Song {
     required this.url,
     required this.imageUrl,
     required this.previewUrl,
+    required this.userAvatarUrl,
+    required this.username,
   });
 
   // Crear una instancia de Song desde los datos de la API (iTunes)
@@ -26,6 +30,8 @@ class Song {
       url: data['collectionViewUrl'] ?? '',
       imageUrl: data['artworkUrl100'] ?? '',
       previewUrl: data['previewUrl'] ?? '',
+      userAvatarUrl: data['sharedByPhoto'] ?? '',
+      username: data['shareByName'] ?? '',
     );
   }
 

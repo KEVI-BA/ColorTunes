@@ -47,6 +47,7 @@ dependencies:
   intl: ^0.20.2
   image_picker: ^1.1.2
   sign_in_with_apple: ^6.0.0
+  
 
 
 dev_dependencies:
@@ -89,6 +90,10 @@ flutter:
   # "family" key with the font family name, and a "fonts" key with a
   # list giving the asset and other descriptors for the font. For
   # example:
+  fonts:
+    - family:  Bigail
+      fonts:
+        - asset: assets/fonts/Bigail.ttf
   # fonts:
   #   - family: Schyler
   #     fonts:

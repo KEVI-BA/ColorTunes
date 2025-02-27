@@ -1,6 +1,6 @@
+import 'package:colortunes_beta/Screens/googleSignProvider.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -20,6 +20,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Instancia del servicio de Google Sign-In
+  final GoogleSignInService _googleSignInService = GoogleSignInService();
 
   Future<void> _createUserDocument(User user, String provider) async {
     final String joinedAt =
@@ -68,22 +71,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   /// Registra al usuario usando Google.
   Future<void> _registerWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return; // El usuario canceló el login.
-
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final UserCredential userCredential =
-          await _auth.signInWithCredential(credential);
+      // Usa el servicio de Google Sign-In
+      final User? user = await _googleSignInService.signInWithGoogle();
+      if (user == null) {
+        // El usuario canceló el inicio de sesión
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Inicio de sesión con Google cancelado")),
+        );
+        return;
+      }
 
       // Crea el documento en Firestore
-      await _createUserDocument(userCredential.user!, "google");
+      await _createUserDocument(user, "google");
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Registro exitoso con Google")),
@@ -95,7 +95,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
   }
 
-  //registro con apple
+  // Registro con Apple
   Future<void> _registerWithApple() async {
     try {
       final credential = await SignInWithApple.getAppleIDCredential(
