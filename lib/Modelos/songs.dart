@@ -35,6 +35,10 @@ class Song {
     );
   }
 
+  set color(color) {}
+
+  set emotion(emotion) {}
+
   // Método para convertir un objeto Song a un mapa (por si necesitas usarlo en Firebase u otros)
   Map<String, dynamic> toMap() {
     return {

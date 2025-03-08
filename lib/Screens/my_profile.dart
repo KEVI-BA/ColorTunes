@@ -1,7 +1,9 @@
+import 'package:audioplayers/audioplayers.dart';
+import 'package:colortunes_beta/Modelos/audioPlayerServices.dart';
+import 'package:flutter/material.dart';
 import 'package:colortunes_beta/Modelos/share_songs.dart';
 import 'package:colortunes_beta/Modelos/songs.dart';
 import 'package:colortunes_beta/Widget/barra_menu.dart';
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -23,6 +25,8 @@ class _MyProfilePageState extends State<MyProfilePage> {
   String _profileImage = "";
   int _followersCount = 0;
   int _followingCount = 0;
+  final AudioPlayerService _audioPlayerService = AudioPlayerService();
+  String? _currentlyPlayingSongId;
 
   @override
   void initState() {
@@ -36,14 +40,12 @@ class _MyProfilePageState extends State<MyProfilePage> {
   // Obtener datos del usuario desde Firestore
   Future<void> _getFollowersCount() async {
     try {
-      // Acceder a la subcolección "followers" dentro del documento del usuario
       QuerySnapshot followersSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(widget.user.uid)
           .collection('followers')
           .get();
 
-      // Contar el número de documentos en la subcolección
       setState(() {
         _followersCount = followersSnapshot.docs.length;
       });
@@ -57,14 +59,12 @@ class _MyProfilePageState extends State<MyProfilePage> {
   // Obtener el recuento de usuarios seguidos
   Future<void> _getFollowingCount() async {
     try {
-      // Acceder a la subcolección "following" dentro del documento del usuario
       QuerySnapshot followingSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(widget.user.uid)
           .collection('following')
           .get();
 
-      // Contar el número de documentos en la subcolección
       setState(() {
         _followingCount = followingSnapshot.docs.length;
       });
@@ -470,6 +470,56 @@ class _MyProfilePageState extends State<MyProfilePage> {
                                                       ],
                                                     ),
                                                   ),
+                                                  const SizedBox(width: 16),
+                                                  // Botón de reproducción
+                                                  StreamBuilder<PlayerState>(
+                                                    stream: _audioPlayerService
+                                                        .onPlayerStateChanged,
+                                                    builder:
+                                                        (context, snapshot) {
+                                                      final isPlaying = snapshot
+                                                              .data ==
+                                                          PlayerState.playing;
+                                                      final isCurrentSong =
+                                                          _currentlyPlayingSongId ==
+                                                              song.id;
+
+                                                      return IconButton(
+                                                        icon: Icon(
+                                                          isPlaying &&
+                                                                  isCurrentSong
+                                                              ? Icons.pause
+                                                              : Icons
+                                                                  .play_arrow,
+                                                          size: 24,
+                                                        ),
+                                                        onPressed: () async {
+                                                          if (isPlaying &&
+                                                              isCurrentSong) {
+                                                            await _audioPlayerService
+                                                                .pause();
+                                                          } else {
+                                                            if (_currentlyPlayingSongId !=
+                                                                song.id) {
+                                                              await _audioPlayerService
+                                                                  .stop();
+                                                              await _audioPlayerService
+                                                                  .play(song
+                                                                      .songUrl);
+                                                              setState(() {
+                                                                _currentlyPlayingSongId =
+                                                                    song.id;
+                                                              });
+                                                            } else {
+                                                              await _audioPlayerService
+                                                                  .play(song
+                                                                      .songUrl);
+                                                            }
+                                                          }
+                                                        },
+                                                      );
+                                                    },
+                                                  ),
                                                 ],
                                               ),
                                             ],
@@ -489,7 +539,7 @@ class _MyProfilePageState extends State<MyProfilePage> {
       bottomNavigationBar: CustomNavBar(
         user: widget.user,
         song: widget.song,
-        currentIndex: 2, // 2 corresponde a "Mi perfil"
+        currentIndex: 2,
         onTap: (index) {
           setState(() {});
         },

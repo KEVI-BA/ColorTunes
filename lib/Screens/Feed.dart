@@ -1,13 +1,15 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:colortunes_beta/Screens/share_songs.dart';
 import 'package:colortunes_beta/Widget/barra_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:colortunes_beta/Api/music_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 import 'dart:math';
 import 'package:colortunes_beta/Modelos/songs.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class MusicSearchPage extends StatefulWidget {
   final User user;
@@ -30,7 +32,10 @@ class _MusicSearchPageState extends State<MusicSearchPage>
   late Animation<double> _rotationAnimation;
   // ignore: unused_field
   int _currentIndex = 0;
-
+  // Agregar estas nuevas variables
+  final TextEditingController _searchController = TextEditingController();
+  List<Song> _searchResults = [];
+  bool _isSearching = false;
   @override
   void initState() {
     super.initState();
@@ -93,25 +98,54 @@ class _MusicSearchPageState extends State<MusicSearchPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          children: [
-            CircleAvatar(
-              backgroundImage: widget.user.photoURL != null &&
-                      widget.user.photoURL!.isNotEmpty
-                  ? NetworkImage(widget.user.photoURL!)
-                  : null,
-              child:
-                  widget.user.photoURL == null || widget.user.photoURL!.isEmpty
-                      ? const Icon(Icons.person, size: 30)
-                      : null,
-            ),
-            const SizedBox(width: 10),
-            Text(widget.user.displayName ?? 'Usuario',
-                style: const TextStyle(fontSize: 18)),
-          ],
-        ),
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Buscar canciones...',
+                  hintStyle: const TextStyle(color: Colors.black),
+                  border: InputBorder.none,
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() {
+                        _isSearching = false;
+                        _searchResults.clear();
+                      });
+                    },
+                  ),
+                ),
+                style: const TextStyle(color: Colors.black),
+                onSubmitted: _performSearch,
+              )
+            : Row(
+                children: [
+                  CircleAvatar(
+                    backgroundImage: widget.user.photoURL != null &&
+                            widget.user.photoURL!.isNotEmpty
+                        ? NetworkImage(widget.user.photoURL!)
+                        : null,
+                    child: widget.user.photoURL == null ||
+                            widget.user.photoURL!.isEmpty
+                        ? const Icon(Icons.person, size: 30)
+                        : null,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(widget.user.displayName ?? 'Usuario'),
+                  const SizedBox(width: 150),
+                  IconButton(
+                    icon: const Icon(Icons.search),
+                    onPressed: () {
+                      setState(() {
+                        _isSearching = true;
+                      });
+                    },
+                  ),
+                ],
+              ),
       ),
-      body: _songs.isEmpty
+      body: _songs.isEmpty && !_isSearching
           ? const Center(child: CircularProgressIndicator())
           : Container(
               decoration: BoxDecoration(
@@ -122,20 +156,26 @@ class _MusicSearchPageState extends State<MusicSearchPage>
                 ),
               ),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Expanded(
                     child: PageView.builder(
                       scrollDirection: Axis.vertical,
-                      itemCount: _songs.length,
+                      itemCount:
+                          _isSearching ? _searchResults.length : _songs.length,
                       itemBuilder: (context, index) {
-                        return _buildSongCard(_songs[index]);
+                        final song = _isSearching
+                            ? _searchResults[index]
+                            : _songs[index];
+                        return _buildSongCard(song);
                       },
                       onPageChanged: (index) {
                         setState(() {
                           _currentSongIndex = index;
-                          _audioPlayer
-                              .play(UrlSource(_songs[index].previewUrl));
+                          _audioPlayer.play(
+                            UrlSource(_isSearching
+                                ? _searchResults[index].previewUrl
+                                : _songs[index].previewUrl),
+                          );
                         });
                       },
                     ),
@@ -166,6 +206,35 @@ class _MusicSearchPageState extends State<MusicSearchPage>
     );
   }
 
+  // Agregar este nuevo método
+  void _performSearch(String query) async {
+    if (query.isEmpty) {
+      setState(() {
+        _searchResults.clear();
+        _isSearching = false;
+      });
+      return;
+    }
+    try {
+      final response = await http.get(
+        Uri.parse(
+            'https://itunes.apple.com/search?term=${Uri.encodeComponent(query)}&entity=song'),
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['results'] != null) {
+          setState(() {
+            _searchResults = (data['results'] as List)
+                .map((song) => Song.fromApi(song))
+                .toList();
+          });
+        }
+      }
+    } catch (e) {
+      print('Error en la búsqueda: $e');
+    }
+  }
+
   Widget _buildSongCard(Song song) {
     return Center(
       child: Card(
@@ -181,24 +250,31 @@ class _MusicSearchPageState extends State<MusicSearchPage>
                 animation: _rotationAnimation,
                 builder: (context, child) {
                   return Transform.rotate(
-                      angle: _rotationAnimation.value,
-                      child: ClipOval(
-                        child: Image.network(
-                          song.imageUrl,
-                          width: 130.0,
-                          height: 130.0,
-                          fit: BoxFit.cover,
-                        ),
-                      ));
+                    angle: _rotationAnimation.value,
+                    child: ClipOval(
+                      child: Image.network(
+                        song.imageUrl,
+                        width: 130.0,
+                        height: 130.0,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  );
                 },
               ),
               const SizedBox(height: 10),
-              Text(song.name,
-                  style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold)),
+              Text(
+                song.name,
+                style:
+                    const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: 10),
-              Text(song.artist,
-                  style: const TextStyle(fontSize: 16, color: Colors.grey)),
+              Text(
+                song.artist,
+                style: const TextStyle(fontSize: 16, color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: 10),
               IconButton(
                 icon: const Icon(Icons.share),
@@ -212,9 +288,6 @@ class _MusicSearchPageState extends State<MusicSearchPage>
                     String userPhotoUrl = userDoc['photoURL'] ?? "";
                     String userDisplayName = userDoc['displayName'] ?? "";
 
-                    Song song = _songs[_currentSongIndex];
-
-                    // Agregar la canción compartida con los campos adicionales
                     await FirebaseFirestore.instance
                         .collection('shared_songs')
                         .add({
@@ -233,7 +306,6 @@ class _MusicSearchPageState extends State<MusicSearchPage>
                       'created_at': FieldValue.serverTimestamp(),
                     });
 
-                    // Navegar a la página de canciones compartidas
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -243,11 +315,10 @@ class _MusicSearchPageState extends State<MusicSearchPage>
                     );
                   } catch (e) {
                     print("Error sharing song: $e");
-                    // Mostrar mensaje de error si es necesario
                   }
                 },
                 iconSize: 40,
-              )
+              ),
             ],
           ),
         ),

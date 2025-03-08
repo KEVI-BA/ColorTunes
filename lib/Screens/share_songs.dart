@@ -75,11 +75,14 @@ class _SharedSongsPageState extends State<SharedSongsPage>
         .where((song) => song.userId != widget.user.uid)
         .toList();
 
+    sharedSongs.shuffle();
+
     setState(() {
       _sharedSongs = sharedSongs;
     });
 
     if (_sharedSongs.isNotEmpty) {
+      _currentIndex = 0;
       _playSong(_sharedSongs[_currentIndex].songUrl);
     }
   }
@@ -108,12 +111,25 @@ class _SharedSongsPageState extends State<SharedSongsPage>
         await songRef.update({
           'likes': FieldValue.arrayUnion([widget.user.uid]),
         });
+
+        setState(() {
+          final index = _sharedSongs.indexWhere((song) => song.id == songId);
+          if (index != -1) {
+            _sharedSongs[index].likes.add(widget.user.uid);
+          }
+        });
       } else {
         await songRef.update({
           'likes': FieldValue.arrayRemove([widget.user.uid])
         });
+
+        setState(() {
+          final index = _sharedSongs.indexWhere((song) => song.id == songId);
+          if (index != -1) {
+            _sharedSongs[index].likes.remove(widget.user.uid);
+          }
+        });
       }
-      _fetchSharedSongs();
     }
   }
 

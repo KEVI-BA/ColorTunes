@@ -8,10 +8,10 @@ class Post {
   final String songUrl;
   final String userId;
   final List<String> comments;
-  int likes; // Cambiado a mutable
+  int likes;
   final String mood;
-  List<String> likedBy; // Lista de usuarios que dieron "me gusta"
-  final String id; // Identificador único del post
+  List<String> likedBy;
+  final String id;
 
   Post({
     required this.artist,
@@ -40,7 +40,7 @@ class Post {
       comments: List<String>.from(data['comments'] ?? []),
       likes: data['likes'] ?? 0,
       mood: data['mood'] ?? '',
-      likedBy: List<String>.from(data['likedBy'] ?? []), // 🛠 Corrección aquí
+      likedBy: List<String>.from(data['likedBy'] ?? []),
       id: id,
     );
   }
