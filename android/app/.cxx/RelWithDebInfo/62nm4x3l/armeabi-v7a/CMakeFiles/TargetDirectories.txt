@@ -1,0 +1,2 @@
+C:/Users/kevin/FLUTTER/PROYECTOS/colortunes_beta/android/app/.cxx/RelWithDebInfo/62nm4x3l/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/Users/kevin/FLUTTER/PROYECTOS/colortunes_beta/android/app/.cxx/RelWithDebInfo/62nm4x3l/armeabi-v7a/CMakeFiles/rebuild_cache.dir
