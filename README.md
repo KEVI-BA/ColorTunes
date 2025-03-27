@@ -2,6 +2,8 @@
 
 Colortunes es una aplicación móvil desarrollada en Flutter que asocia la música con colores según la emoción que transmite cada canción. Utiliza la Apple Music API para obtener información sobre las canciones y un sistema de análisis para categorizarlas en base a cuatro emociones principales, representadas con colores únicos.
 
+
+
 🚀 Características principales
 
 ✅ Análisis de emociones en la música: La app asocia cada canción con una emoción y un color basado en su género y características.
@@ -11,6 +13,8 @@ Colortunes es una aplicación móvil desarrollada en Flutter que asocia la músi
 ✅ Interfaz intuitiva y atractiva: Una experiencia de usuario envolvente con una paleta de colores dinámica.
 
 ✅ Integración con Apple Music API: Obtiene metadatos de las canciones y permite explorar su información.
+
+
 
 🔧 Tecnologías utilizadas
 Frontend: Flutter (Dart)
@@ -23,6 +27,8 @@ Control de versiones: Git y GitHub
 
 📌 Objetivo del Proyecto
 El propósito de Colortunes es ofrecer una forma innovadora y visual de interactuar con la música, permitiendo a los usuarios descubrir canciones según su estado de ánimo y sumergirse en una experiencia audiovisual envolvente.
+
+
 
 Inicio 
 
