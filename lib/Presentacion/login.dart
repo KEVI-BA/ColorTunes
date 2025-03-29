@@ -20,8 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset:
-          true, // Asegura que el contenido se ajuste cuando el teclado aparece
+      resizeToAvoidBottomInset: true,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -127,7 +126,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.g_translate_rounded,
-                          color: Colors.white, size: 24), // Ícono de Google
+                          color: Colors.white, size: 24),
                       SizedBox(width: 8),
                       Text(
                         "Iniciar sesión con Google",
@@ -194,7 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _navigateToFeed(userCredential.user!);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        const SnackBar(content: Text('Error al inciar sesión')),
       );
     }
   }
@@ -212,7 +211,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleSignInWithApple() async {
-    // Implementa aquí la lógica para el inicio de sesión con Apple.
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
           content: Text('Inicio de sesión con Apple no implementado')),
