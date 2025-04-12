@@ -31,7 +31,7 @@ El propósito de Colortunes es ofrecer una forma innovadora y visual de interact
 
 Inicio 
 
-<img src="https://github.com/user-attachments/assets/7cd3c544-a961-4e6a-b366-8835afc2e9ae" width="300" height="400">
+<img src="https://github.com/user-attachments/assets/7cd3c544-a961-4e6a-b366-8835afc2e9ae" width="300" height="500">
 
 
 
@@ -39,7 +39,7 @@ Inicio
 
 Registro 
 
-![Imagen de WhatsApp 2025-03-26 a las 21 21 33_b4d62812](https://github.com/user-attachments/assets/824c0ff0-5ec5-4393-a1f0-615b4fa50e20)
+<img src="https://github.com/user-attachments/assets/824c0ff0-5ec5-4393-a1f0-615b4fa50e20" width="300" height="500">
 
 
 Explorar
